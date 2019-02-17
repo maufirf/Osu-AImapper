@@ -1,10 +1,27 @@
+"""This is the module that responsible to aid the input and output
+process of this whole program"""
+
+# Local modules
 import util.HitObject as ho
 import util.TimingPoint as tp
 import util.Difficulty as di
+
+# Built-in library modules
 import math
 
 def readObjects(filepath='dump/Dan Salvato - Your Reality (Nozhomi) [Just You].osu',\
     grouped=False,parent_map=None):
+    """Reads the given .OSU file from `filepath`, then imports them
+    into the program to be processed. If `parent_map` is given, it will
+    assign each of the objects to unite on the given map reference.
+    Parameters
+    ----------
+    filepath : `str`
+    \tThe .OSU file path that is going to be rendered
+    grouped : `bool`
+    \tIf True, the returned HitObjects list will be cached to appropriate sublist synced to their TimingPoint region
+    parent_map : `Beatmap`
+    \tThe beatmap that is going to be reference as uniform"""
     fo = open(filepath,'r',encoding='utf-8')
     flist = [x.replace('\n','') for x in fo.readlines()]
     mapName = fo.name
@@ -41,6 +58,13 @@ def readObjects(filepath='dump/Dan Salvato - Your Reality (Nozhomi) [Just You].o
     else: return mapName, difficulty, timingPoints, hitObjects
     
 def printObjects(filepath='dump/Dan Salvato - Your Reality (Nozhomi) [Just You].osu',parent_map=None):
+    """It simply prints what it renders from the given .OSU file to console.
+    Parameters
+    ----------
+    filepath : `str`
+    \tThe .OSU file path that is going to be rendered
+    parent_map : `Beatmap`
+    \tThe beatmap that is going to be reference as uniform"""
     mapName, difficulty, timingPoints, hitObjects = readObjects(filepath,parent_map=parent_map)
     timingPoints[0].offset=0
     hitObjectsGroups = [[] for i in range(len(timingPoints))]

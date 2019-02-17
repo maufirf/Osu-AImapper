@@ -3,15 +3,55 @@
 import copy
 import util.TimingPoint as tp
 import util.Difficulty as di
+import util.Beatmap as bm
 
 class HitObjectInputError(Exception):
     def __str__(self):
         return "Not a valid binary number"
 
 class HitObject:
+    """Primary constructor of generic Hit_object class
+    
+    Type 1::
+        Hit_object(raw_string)
+    To initialize Hit_object object, just shove in the string of the
+    ONE Hit Object string straight like the ones you'd see inside an
+    .OSU file. example::
+        >>> Hit_object("390,227,178322,2,0,L|362:348,1,89,2|0,1:2|1:2,0:0:0:0:")
+
+    Type 2::
+        Hit_object(x,y,time,type,hitSound)
+    or::
+        Hit_object(x=..,y=..,time=..,type=..,hitSound=..)
+    The relevant input parameter must be int in type. for example::
+        >>> Hit_object(390,227,178322,2,0,'L|362:348',1,89,'2|0','1:2|1:2','0:0:0:0:')
+    
+    Parameters
+    ----------
+    x : str or int
+        if str, then the whole hit object raw string. else, the x attribute of an hit object
+    *args : int
+        only if x is int, series of parameter y, time, type, and hitSound
+    **kwargs : int
+        (alternative of using *args,)
+    
+    """
     DEBUG = False
 
     class Type:
+        """Subclass of `HitObject` that represents the `HitObject`'s
+        object type and combo properties.
+
+        There are three types to initialize this object:
+
+        1. One param, binary `string`
+        \texample: Type('00010101') -> Circle, new combo, skipping 2 colours.
+        2. One param, decimal `integer`
+        \texample: Type(6) -> Slider, new combo, skipping 1 colour.
+        3. Six params, starting from the left is the least significant digit (bit 0) as `integer`s or `bool`s.
+        \tType(circleBit,sliderBit,newComboBit,spinnerBit,threeBitsOfColorSkip,maniaHoldBit)
+        \texample: Type(False,True,False,False,3,False) -> Slider, newCombo is false so color skip of 4 is ignored
+        """
         # Note from the wiki:
         # "Circles, sliders, spinners, and hold notes can be OR'd with
         # new combos and the combo skip value, but not with each other."
@@ -78,14 +118,28 @@ class HitObject:
             else: return '<'+self.objectType+'>'
 
         def to_decint(self):
+            """Returns the decimal `integer` value of this object"""
             objval = self.OBJECT_TYPE_VALUE[self.OBJECT_TYPE.index(self.objectType)]
             if self.newCombo: return objval + 4 + int(format(self.colorSkip-1,'03b')+'0000',2)
             else: return objval
         
         def to_binstr(self):
+            """Returns the binary `string` value of this object"""
             return format(self.to_decint(),'08b')
 
     class HitSound:
+        """Subclass of `HitObject` that represents its `HitSound`s, either a
+        combination of `'normal'`, `'whistle'`, `'finish'`, or `'clap'`.
+        
+        There are two ways to initialize this object:
+        
+        One - One param
+        \tHitSound(decimal_value)
+        \tdecimal_value can be either `int` or `str`
+        Two - Four params
+        \tHitSound(normal,whistle,finish,clap)
+        \teach of the params is `boolean` or {0,1} `int`s
+        """
         SOUND_TYPE=['normal','whistle','finish','clap']
 
         def __init__(self,intval,*args):
@@ -137,32 +191,7 @@ class HitObject:
             return '<{0}>'.format(','.join(self.activeSounds))
 
     def __init__(self, x,*args,**kwargs):
-        """Primary constructor of generic Hit_object class
-        
-        Type 1::
-            Hit_object(raw_string)
-        To initialize Hit_object object, just shove in the string of the
-        ONE Hit Object string straight like the ones you'd see inside an
-        .OSU file. example::
-            >>> Hit_object("390,227,178322,2,0,L|362:348,1,89,2|0,1:2|1:2,0:0:0:0:")
-
-        Type 2::
-            Hit_object(x,y,time,type,hitSound)
-        or::
-            Hit_object(x=..,y=..,time=..,type=..,hitSound=..)
-        The relevant input parameter must be int in type. for example::
-            >>> Hit_object(390,227,178322,2,0,'L|362:348',1,89,'2|0','1:2|1:2','0:0:0:0:')
-        
-        Parameters
-        ----------
-        x : str or int
-            if str, then the whole hit object raw string. else, the x attribute of an hit object
-        *args : int
-            only if x is int, series of parameter y, time, type, and hitSound
-        **kwargs : int
-            (alternative of using *args,)
-        
-        """
+        """Actual constructor of `HitObject`. Read `HitObject()` documentation for the info."""
         if HitObject.DEBUG: print('x =',x,'\n*args',args,'\n**kwargs',kwargs)
         if 'next_ho' in kwargs: self.next_ho = kwargs['next_ho']
         else: self.next_ho = None
@@ -210,7 +239,28 @@ class HitObject:
     @staticmethod
     def wrap(literal,prev_ho=None,next_ho=None,parent_map=None):
         """Returns an objectType-specific object, not a generic HitObject
-        from an literal string input"""
+        from an literal string input
+
+        \twrap(literal,[prev_ho],[next_ho],[parent_map])
+        
+        Parameters
+        ----------
+        literal : `str`
+        The literal value of the object, for example '411,218,205850,2,0,L|385:111,1,89,10|0,0:2|0:0,0:0:0:0:'
+
+        prev_ho : `HitObject`
+        Previous `HitObject` instance on the chainlink. Default is `None`
+
+        next_ho : `HitObject`
+        Next `HitObject` instance on the chainlink. Default is `None`
+
+        parent_map : `Beatmap`
+        The parent `Beatmap` of current instance. Default is `None`
+        
+        Return
+        ------
+        `HitObject` derivates, either `Circle`, `Slider`, `Spinner`,
+        or `ManiaHold` depends on the `Type` derived from literal param."""
         objType = HitObject.Type(literal.split(',')[3]).objectType
         if objType=='circle':
             return Circle(literal,prev_ho=prev_ho,next_ho=next_ho,parent_map=parent_map)
@@ -226,8 +276,18 @@ class HitObject:
     
     @staticmethod
     def cast(x):
-        """returns a new, generic HitObject-casted instance of either Circle,
-        Slider, Spinner, or ManiaHold."""
+        """returns a new, generic `HitObject`-casted instance of either `Circle`,
+        `Slider`, `Spinner`, or `ManiaHold`.
+        
+        Parameter
+        ---------
+        x : `HitObject`
+        The `HitObject` variety that you want to cast to Either of `Circle`, `Slider`, `Spinner`, or `ManiaHold` works as well.
+        
+        Return
+        ------
+        A new, generic `HitObject` instance with the old parameters from
+        its derivative preserved. Recastable to their old class."""
         if type(x) in [Circle,Slider,Spinner,ManiaHold]:
             out = copy.deepcopy(x)
             out.__class__ = HitObject
@@ -238,6 +298,14 @@ class HitObject:
 
     
 class Circle(HitObject):
+    """An `HitObject` derivate variant that fits to describe a classic
+    Osu! circle. There are two ways of using this, though only one is
+    supported for now:
+    ``Circle(literal,[extras],[prev_ho],[next_ho],[parent_map])``
+
+    and (the unsupported one):
+    ``Circle(x,y,timing,objType,hitSound,[extras],[prev_ho],[next_ho],[parent_map])``
+    """
     def __init__(self, x, y=None, timing=None, objType=None, hitSound=None, extras='0:0:0:0',\
         prev_ho=None, next_ho=None, parent_map=None):
         # case if the input is literal string of the object.
@@ -258,6 +326,14 @@ class Circle(HitObject):
         return '[{0}~{1}]'.format(super().__str__(),self.extras)
 
 class Slider(HitObject):
+    """An `HitObject` derivate variant that fits to describe a classic
+    Osu! slider. There are two ways of using this, though only one is
+    supported for now:
+    ``Slider(literal,[extras],[prev_ho],[next_ho],[parent_map])``
+
+    and (the unsupported one):
+    ``Slider(x,y,timing,objType,hitSound,path,repeat,pixelLength,[edgeHitSounds],[edgeAdditions],[extras],[prev_ho],[next_ho],[parent_map])``
+    """
     def __init__(self,x=None,y=None,timing=None,objtype=None,hitSound=None,\
         path=None,repeat=None,pixelLength=None,edgeHitSounds=None,\
             edgeAdditions=None,extras='0:0:0:0:',prev_ho=None,next_ho=None,parent_map=None):
@@ -291,7 +367,27 @@ class Slider(HitObject):
         return '[{0}=>{1};(rep={2},pxLen={3})~(edHS={4},edAd={5});{6}]'.format(super().__str__(),self.path,self.repeat,self.pixelLength,self.edgeHitSounds,self.edgeAdditions,self.extras)
     
     def get_duration(self,timingPoint=None,difficulty=None):
-        if {None}==set([timingPoint,difficulty]):
+        """Finds the slider duration of current slider by this formula:
+        
+        ``pixelLength / (100.0 * slider_multiplier) * milisecs_per_beats``
+
+        usage:
+        ``get_duration([timingPoint],[difficulty])``
+        Parameters
+        ----------
+        timingPoint : `TimingPoint` or `float` |
+        A `TimingPoint` instance in which the slider's time laid the region on.
+        REQUIRED IF the `Slider` instance don't have parent_map (or `None`).
+
+        difficulty : `Difficulty` or `float` |
+        A `Difficulty` instance in which the slider relies its slider multiplier.
+        REQUIRED IF the `Slider` instance  don't have parent_map (or `None`)
+        Return
+        ------
+        `float` value of the slider duration in miliseconds. Recommended to ceil to
+        the nearest next integral value.
+        """
+        if {None}==set([timingPoint,difficulty]) and self.parent_map.__class__==bm.Beatmap.__class__:
             mpb = tp.TimingPoint.find_region(self.parent_map.timingPoints,self.time).inherited_mpb()
             SM = self.parent_map.difficulty.SM
             return self.pixelLength / (100.0 * SM) * mpb
@@ -309,6 +405,14 @@ class Slider(HitObject):
 
 
 class Spinner(HitObject):
+    """An `HitObject` derivate variant that fits to describe a Osu! spinner.
+    There are two ways of using this, though only one is
+    supported for now:
+    ``Spinner(literal,[extras],[prev_ho],[next_ho],[parent_map])``
+
+    and (the unsupported one):
+    ``Spinner(x,y,timing,objType,hitSound,endTime,[extras],[prev_ho],[next_ho],[parent_map])``
+    """
     def __init__(self,x=None,y=None,timing=None,objtype=None,hitSound=None,\
         endTime=None,extras='0:0:0:0:',prev_ho=None,next_ho=None,parent_map=None):
         if type(x) is str and {None}==set([y,timing,objtype,hitSound,endTime]):
@@ -328,6 +432,14 @@ class Spinner(HitObject):
         return '[{0},end={1}ms~{2}]'.format(super().__str__(),self.endTime,self.extras)
 
 class ManiaHold(HitObject):
+    """An `HitObject` derivate variant that fits to describe a Osu!Mania hold key.
+    There are two ways of using this, though only one is
+    supported for now:
+    ``ManiaHold(literal,[extras],[prev_ho],[next_ho],[parent_map])``
+    
+    and (the unsupported one):
+    ``ManiaHold(x,y,timing,objType,hitSound,endTime,[extras],[prev_ho],[next_ho],[parent_map])``
+    """
     def __init__(self,x=None,y=None,timing=None,objtype=None,hitSound=None,\
         endTime=None,extras='0:0:0:0:',prev_ho=None,next_ho=None,parent_map=None):
         if type(x) is str and {None}==set([y,timing,objtype,hitSound,endTime]):
