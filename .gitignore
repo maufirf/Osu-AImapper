@@ -1,4 +1,7 @@
 *.pyc
 **/__pycache__
+__pycache__
 **/.vscode
-**/MyTrainingDigest
+.vscode
+MyTrainingDigest
+ref
