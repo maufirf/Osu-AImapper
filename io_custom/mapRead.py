@@ -5,12 +5,12 @@ process of this whole program"""
 import util.HitObject as ho
 import util.TimingPoint as tp
 import util.Difficulty as di
+import util.Beatmap as bm
 
 # Built-in library modules
 import math
 
-def readObjects(filepath='dump/Dan Salvato - Your Reality (Nozhomi) [Just You].osu',\
-    grouped=False,parent_map=None):
+def readObjects(filepath='dump/Dan Salvato - Your Reality (Nozhomi) [Just You].osu', grouped=False, returnAsBeatmap=False):
     """Reads the given .OSU file from `filepath`, then imports them
     into the program to be processed. If `parent_map` is given, it will
     assign each of the objects to unite on the given map reference.
@@ -22,6 +22,7 @@ def readObjects(filepath='dump/Dan Salvato - Your Reality (Nozhomi) [Just You].o
     \tIf True, the returned HitObjects list will be cached to appropriate sublist synced to their TimingPoint region
     parent_map : `Beatmap`
     \tThe beatmap that is going to be reference as uniform"""
+    parent_map = bm.Beatmap(None,None,None,None)
     fo = open(filepath,'r',encoding='utf-8')
     flist = [x.replace('\n','') for x in fo.readlines()]
     mapName = fo.name
@@ -54,8 +55,13 @@ def readObjects(filepath='dump/Dan Salvato - Your Reality (Nozhomi) [Just You].o
             hitObjectsGroups[timingPoints.index(\
                 tp.TimingPoint.find_region(timingPoints,hitObject.time)\
             )].append(hitObject)
-        return mapName, difficulty, timingPoints, hitObjectsGroups
-    else: return mapName, difficulty, timingPoints, hitObjects
+        parent_map.setAttrib(mapName, difficulty, timingPoints, hitObjectsGroups)
+        if returnAsBeatmap: return parent_map
+        else :return mapName, difficulty, timingPoints, hitObjectsGroups
+    else:
+        parent_map.setAttrib(mapName, difficulty, timingPoints, hitObjects)
+        if returnAsBeatmap: return parent_map
+        else: return mapName, difficulty, timingPoints, hitObjects
     
 def printObjects(filepath='dump/Dan Salvato - Your Reality (Nozhomi) [Just You].osu',parent_map=None):
     """It simply prints what it renders from the given .OSU file to console.
@@ -65,9 +71,12 @@ def printObjects(filepath='dump/Dan Salvato - Your Reality (Nozhomi) [Just You].
     \tThe .OSU file path that is going to be rendered
     parent_map : `Beatmap`
     \tThe beatmap that is going to be reference as uniform"""
-    mapName, difficulty, timingPoints, hitObjects = readObjects(filepath,parent_map=parent_map)
+    mapName, difficulty, timingPoints, hitObjects = readObjects(filepath)
     timingPoints[0].offset=0
     hitObjectsGroups = [[] for i in range(len(timingPoints))]
+    smallestInterval = hitObjects[-1].time
+    prevTime = -hitObjects[-1].time
+    print(smallestInterval,prevTime)
     objectCount=[0,0,0,0]
     for hitObject in hitObjects:
         objectCount[ho.HitObject.Type.OBJECT_TYPE.index(hitObject.type.objectType)]+=1
@@ -84,19 +93,31 @@ def printObjects(filepath='dump/Dan Salvato - Your Reality (Nozhomi) [Just You].
         for hitObject in hitObjectGroup:
             obType = hitObject.type.objectType
             if obType == ho.HitObject.Type.OBJECT_TYPE[0]:
-                print('\tCircle at {0}ms'.format(hitObject.time))
+                smallestInterval = min(smallestInterval, hitObject.time-prevTime)
+                prevTime = hitObject.time
+                print('\tCircle at {0}ms | SI now = {1}'.format(hitObject.time,smallestInterval))
             elif obType == ho.HitObject.Type.OBJECT_TYPE[1]:
-                dur = math.ceil(hitObject.get_duration(timingPoint.inherited_mpb(),difficulty.get_slider_values()[1]))
-                print('\tSlider at {0}ms -> {1}ms (for {2}ms)'.format(\
-                    hitObject.time, hitObject.time+dur, dur))
+                dur = math.ceil(hitObject.get_duration())
+                smallestInterval = min(smallestInterval, hitObject.time-prevTime)
+                prevTime = hitObject.time + dur
+                print('\tSlider at {0}ms -> {1}ms (for {2}ms) | SI now -> {3}'.format(\
+                    hitObject.time, hitObject.time+dur, dur, smallestInterval))
             elif obType == ho.HitObject.Type.OBJECT_TYPE[2]:
-                print('\tSpinner at {0}ms -> {1}ms (for {2}ms)'.format(\
-                    hitObject.time, hitObject.endTime, hitObject.endTime-hitObject.time))
+                smallestInterval = min(smallestInterval, hitObject.time-prevTime)
+                prevTime = hitObject.endTime
+                print('\tSpinner at {0}ms -> {1}ms (for {2}ms) | SI now = {3}'.format(\
+                    hitObject.time, hitObject.endTime, hitObject.endTime-hitObject.time,smallestInterval))
             elif obType == ho.HitObject.Type.OBJECT_TYPE[3]:
-                print('\tMania Hold at {0}ms -> {1}ms (for {2}ms)'.format(\
-                    hitObject.time, hitObject.endTime, hitObject.endTime-hitObject.time))
+                smallestInterval = min(smallestInterval, hitObject.time-prevTime)
+                prevTime = hitObject.endTime
+                print('\tMania Hold at {0}ms -> {1}ms (for {2}ms) | SI now = {3}'.format(\
+                    hitObject.time, hitObject.endTime, hitObject.endTime-hitObject.time,smallestInterval))
             else:
                 print('01 UNPARSEABLE!')
                 return # TODO implement exception
+            if smallestInterval < 0:
+                print("\t\t\t\t\t\tINTERVAL IS NIGGATIVE! {0}ms!".format(smallestInterval))
+                return
     print('Total objects = {0}\n\tCircles = {1}\n\tSliders = {2}\n\tSpinners = {3}\n\tMania Hold = {4}'\
-        .format(sum([objectCount]),objectCount[0],objectCount[1],objectCount[2],objectCount[3]))
+        .format(sum(objectCount),objectCount[0],objectCount[1],objectCount[2],objectCount[3]))
+    print('Shortest interval time between objects : {0}ms'.format(smallestInterval))

@@ -236,6 +236,12 @@ class HitObject:
     def __str__(self):
         return '[{0};({1},{2})->{3}ms;{4}]'.format(self.type,self.x,self.y,self.time,self.hitSound)
 
+    def get_startTime(self):
+        return self.time
+        
+    def get_endTime(self):
+        return self.time
+
     @staticmethod
     def wrap(literal,prev_ho=None,next_ho=None,parent_map=None):
         """Returns an objectType-specific object, not a generic HitObject
@@ -387,10 +393,10 @@ class Slider(HitObject):
         `float` value of the slider duration in miliseconds. Recommended to ceil to
         the nearest next integral value.
         """
-        if {None}==set([timingPoint,difficulty]) and self.parent_map.__class__==bm.Beatmap.__class__:
+        if {None}==set([timingPoint,difficulty]) and isinstance(self.parent_map,bm.Beatmap):
             mpb = tp.TimingPoint.find_region(self.parent_map.timingPoints,self.time).inherited_mpb()
             SM = self.parent_map.difficulty.SM
-            return self.pixelLength / (100.0 * SM) * mpb
+            return (self.pixelLength * mpb) / (100.0 * SM)
         elif isinstance(timingPoint,(tp.TimingPoint,float)) and\
             isinstance(difficulty,(list,float)):
             return self.pixelLength / \
@@ -401,6 +407,13 @@ class Slider(HitObject):
                     (timingPoint.inherited_mpb() if type(timingPoint)==tp.TimingPoint else None)
         else :
             print('FORMAT ERROR BANGKe!')
+            return # TODO implement exception
+
+    def get_endTime(self,timingPoint=None,difficulty=None):
+        if {None}==set([timingPoint,difficulty]) and isinstance(self.parent_map,bm.Beatmap):
+            return self.get_duration() + self.time
+        else:
+            print('Parameter input is not supported yet') # TODO implement parameter support
             return # TODO implement exception
 
 
@@ -431,6 +444,9 @@ class Spinner(HitObject):
     def __str__(self):
         return '[{0},end={1}ms~{2}]'.format(super().__str__(),self.endTime,self.extras)
 
+    def get_endTime(self):
+        return self.endTime
+
 class ManiaHold(HitObject):
     """An `HitObject` derivate variant that fits to describe a Osu!Mania hold key.
     There are two ways of using this, though only one is
@@ -457,6 +473,9 @@ class ManiaHold(HitObject):
 
     def __str__(self):
         return '[{0},end={1}ms~{2}]'.format(super().__init__(),self.endTime,self.extras)
+    
+    def get_endTime(self):
+        return self.endTime
 
     """OWO
     class Circle:

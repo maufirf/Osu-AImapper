@@ -3,3 +3,6 @@ def list_rindex(li, x):
         if li[i] == x:
             return i
     raise ValueError("{} is not in list".format(x))
+
+def np_max_elementwise(a,b):
+    return (a*(a>=b))+((b>a)*b)
