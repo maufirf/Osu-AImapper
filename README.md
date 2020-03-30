@@ -10,4 +10,6 @@ Currently this is still in development and I'm personally still learning about A
 *Artificial Intelligence Introduction* course i went through last semester, i don't think my knowledge is sufficient enough
 for this, that's why i'll keep learning albeit just by myself.
 
-I'm not really thinking to open the development to public for now, but if you're interested to be involved, come and hang out to [my Discord server](https://discord.gg/2UacHXJ) and let's talk about that. Check the [most recent Osu! forum thread for Osu!Automapper](https://osu.ppy.sh/community/forums/topics/872388)
+I'm not really thinking to open the development to public for now, but if you're interested to be involved, come and hang out to [my Discord server](https://discord.gg/4z5zwZ) and let's talk about that. Check the [most recent Osu! forum thread for Osu!Automapper](https://osu.ppy.sh/community/forums/topics/872388), which is very old lmao.
+
+***NOTE:*** I'm in hiatus developing this for undetermined duration. My mental state is really not okay to keep continuing my hobby projects while also doing college stuff and working. Thanks for understanding!
